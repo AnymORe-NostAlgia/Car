@@ -29,7 +29,8 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
 
     int[] getDis=new int[12];
     int[] SensorAngel={-180,-45,-30,30,45,180};
-    Integer[] distance={getDis[0], getDis[1], getDis[2], getDis[4], getDis[5], getDis[6]};
+    int Lflag=0;
+    int Rflag=0;
 
     byte[] mBuff = new byte[100];
     int mBuffLen = 0;
@@ -149,7 +150,6 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
         sendCarPacket( SmartMessage.CENTER );
     }
     public void clickAvoid(View view){
-
         avoidTask.execute((String)null);
     }
 
@@ -405,10 +405,8 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
         @Override
         public void run() {
             // TODO Auto-generated method stub
-            Log.i("tag","normal task...\n\n\n\n\n\n\n\n\n\n");
 
             while (mThreadRun) {
-                Log.i("tag","normal task...");
                 try {
                     if (mLastCMD != mLastSendCMD) {
                         mLastSendCMD = mLastCMD;
@@ -424,30 +422,6 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
 
     }
 
-    public class sensorAmend extends Thread {
-
-        public void run()
-        {
-
-            for(int i=0;i<3;i++)
-            {
-                if(getDis[0]<distance[0]) distance[0]=getDis[0];
-                if(getDis[1]<distance[1]) distance[1]=getDis[1];
-                if(getDis[2]<distance[2]) distance[2]=getDis[2];
-                if(getDis[4]<distance[3]) distance[3]=getDis[4];
-                if(getDis[5]<distance[4]) distance[4]=getDis[5];
-                if(getDis[6]<distance[5]) distance[5]=getDis[6];
-                try {
-                    Thread.sleep( 100 );
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
-
-
-    }
 
     public class AvoidTask extends AsyncTask<String,Integer[],ArrayList<Integer>> {
 
@@ -455,10 +429,14 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
         protected ArrayList<Integer> doInBackground(String... params){
             ArrayList<Integer> values = new ArrayList<Integer>();
             while (mAvoid) {
-//                Log.e("tag", "run: ");
                 try {
-//                    Log.e("tag", "run00: ");
                     double sum=0;
+                    Integer[] distance={getDis[0], getDis[1], getDis[2], getDis[4], getDis[5], getDis[6]};
+
+                    for(int i=0;i<6;i++)
+                    {
+                        if (distance[i]>150) distance[i]=150;
+                    }
 
                     /*for (int i=0;i<3;i++){
                         try {
@@ -473,13 +451,22 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
                         if(getDis[i]<distance[i]){
                             distance[i]=getDis[i];
                         }
-                        Log.i("disss",Integer.toString(distance[i]));
                     }*/
 
                     double totalDistance = 0;
+
+
+                    //如果正前方无障碍物，前行
+                    if(getDis[3]>60){
+                        sendCarPacket(SmartMessage.TOP_CENTER);
+                        Log.e("data","Go");
+                        Thread.sleep(150);
+                        continue;
+                    }
+
                     for(int i=0;i<6;i++)
                     {
-                        if(distance[i]<=60)
+                        if(distance[i]<=50)
                         {
                             hasObstictle=true;
                             break;
@@ -493,8 +480,6 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
 
                     if(hasObstictle)
                     {
-//                        Log.e("tag", "run11: ");
-                        values.add(1);
                         for(int i=0; i < SensorAngel.length; i++){
                             sum += distance[i] * SensorAngel[i];
                             totalDistance += (double) distance[i];
@@ -502,51 +487,72 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
 
                         double desiredAngel = sum / totalDistance;
 
-                        /*values.add(totalDistance);
-                        values.add(desiredAngel);
-                        values.add(sleeptime);*/
+                        Log.e("data", "totalDistance: "+Double.toString(totalDistance));
+                        Log.e("data", "desiredAngel: "+Double.toString(desiredAngel));
+
 
                         if(desiredAngel<0){
                             values.add(2);
                             desiredAngel = Math.abs( desiredAngel );
-                            double sleeptime=desiredAngel/30;
-                            int truesleeptime=(int)(sleeptime*1000);
-                            sendCarPacket(SmartMessage.TOP_CENTER);
+                            if(Lflag>1) continue;
+                            double sleeptime=desiredAngel*11;
+                            int truesleeptime=(int)(sleeptime);
+                            Log.e("data", "1: "+Double.toString(getDis[0])+" 2: "+Double.toString(getDis[1])+" 3: "+Double.toString(getDis[2]));
+                            Log.e("data", "4: "+Double.toString(getDis[3])+" 5: "+Double.toString(getDis[4])+" 6: "+Double.toString(getDis[5]));
+                            Log.e("data", "LEFT ");
+                            Log.e("data", "truesleeptime: "+Double.toString(truesleeptime));
+                            sendCarPacket(SmartMessage.LEFT);
+                            Lflag++;
+                            Rflag=0;
                             Thread.sleep( truesleeptime );
+                            //sendCarPacket(SmartMessage.CENTER);
 
                         } else if(desiredAngel>0){
                             values.add(3);
-                            double sleeptime=desiredAngel/30;
-                            int truesleeptime=(int)(sleeptime*1000);
+                            if(Rflag>1) continue;
+                            double sleeptime=desiredAngel*11;
+                            int truesleeptime=(int)(sleeptime);
+                            Log.e("data", "1: "+Double.toString(getDis[0])+" 2: "+Double.toString(getDis[1])+" 3: "+Double.toString(getDis[2]));
+                            Log.e("data", "4: "+Double.toString(getDis[3])+" 5: "+Double.toString(getDis[4])+" 6: "+Double.toString(getDis[5]));
+                            Log.e("data", "RIGHT ");
+                            Log.e("data", "truesleeptime: "+Double.toString(truesleeptime));
                             sendCarPacket(SmartMessage.RIGHT);
+                            Rflag++;
+                            Lflag=0;
                             Thread.sleep( truesleeptime );
+                            //sendCarPacket(SmartMessage.CENTER);
 
                         }else {
                             values.add(4);
+                            Log.e("data", "STRAIGHT ");
                             sendCarPacket(SmartMessage.TOP_CENTER);
+                            Lflag=0;
+                            Rflag=0;
 //                            Thread.sleep( 3000 );
                         }
                     }
 
                     else
                     {
-//                        Log.d("tag", "run22: ");
+                        Log.e("data", "1: "+Double.toString(getDis[0])+" 2: "+Double.toString(getDis[1])+" 3: "+Double.toString(getDis[2]));
+                        Log.e("data", "4: "+Double.toString(getDis[3])+" 5: "+Double.toString(getDis[4])+" 6: "+Double.toString(getDis[5]));
+                        Log.e("data","No Obstictle");
                         sendCarPacket(SmartMessage.TOP_CENTER);
+                        Lflag=0;
+                        Rflag=0;
                     }
 
 
                 } catch (InterruptedException e) {
-//                    Log.d("tag", "run33: ");
                     e.printStackTrace();
                 }
             }
-//            super.run();
             return values;
         }
         @Override
         protected void onProgressUpdate(Integer[]... values) {
-            showValues.setText("1:"+values[0][0].toString()+" 2:"+values[0][1].toString()+" 3:"+values[0][2].toString()+"\n4:"+values[0][3].toString()+" 5:"+values[0][4].toString()+" 6:"+values[0][5].toString());
-            Log.e("myyyyy",  values[0].toString());
+            showValues.setText("1:"+values[0][0].toString()+"  2:"+values[0][1].toString()+"\n3:"+values[0][2].toString()+"  4:"+values[0][3].toString()
+                    +"\n5:"+values[0][4].toString()+"  6:"+values[0][5].toString());
         }
         @Override
         protected void onPostExecute(ArrayList<Integer>  values) {
