@@ -31,6 +31,8 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
     int[] SensorAngel={-180,-45,-30,30,45,180};
     int Lflag=0;
     int Rflag=0;
+    int LLflag=0;
+    int RRflag=0;
 
     byte[] mBuff = new byte[100];
     int mBuffLen = 0;
@@ -460,13 +462,18 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
                     if(getDis[3]>60){
                         sendCarPacket(SmartMessage.TOP_CENTER);
                         Log.e("data","Go");
-                        Thread.sleep(150);
+                        Log.e("data","distance="+getDis[3]);
+                        //Thread.sleep(25);
+                        Lflag=0;
+                        Rflag=0;
+                        LLflag=0;
+                        RRflag=0;
                         continue;
                     }
 
                     for(int i=0;i<6;i++)
                     {
-                        if(distance[i]<=50)
+                        if(distance[i]<=58)
                         {
                             hasObstictle=true;
                             break;
@@ -487,29 +494,49 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
 
                         double desiredAngel = sum / totalDistance;
 
-                        Log.e("data", "totalDistance: "+Double.toString(totalDistance));
-                        Log.e("data", "desiredAngel: "+Double.toString(desiredAngel));
+                        Log.e("总距离", "totalDistance: "+Double.toString(totalDistance));
+                        Log.e("转动角度", "desiredAngel: "+Double.toString(desiredAngel));
 
 
                         if(desiredAngel<0){
                             values.add(2);
                             desiredAngel = Math.abs( desiredAngel );
-                            if(Lflag>1) continue;
+                            if(Lflag>1)
+                            {
+                                if(LLflag>1)
+                                {
+                                    Lflag=0;
+                                    LLflag=0;
+                                }
+                                else LLflag++;
+                                continue;
+                            }
                             double sleeptime=desiredAngel*11;
                             int truesleeptime=(int)(sleeptime);
                             Log.e("data", "1: "+Double.toString(getDis[0])+" 2: "+Double.toString(getDis[1])+" 3: "+Double.toString(getDis[2]));
                             Log.e("data", "4: "+Double.toString(getDis[3])+" 5: "+Double.toString(getDis[4])+" 6: "+Double.toString(getDis[5]));
                             Log.e("data", "LEFT ");
-                            Log.e("data", "truesleeptime: "+Double.toString(truesleeptime));
+                            Log.e("睡眠时间", "truesleeptime: "+Double.toString(truesleeptime));
                             sendCarPacket(SmartMessage.LEFT);
                             Lflag++;
                             Rflag=0;
+                            RRflag=0;
                             Thread.sleep( truesleeptime );
                             //sendCarPacket(SmartMessage.CENTER);
 
                         } else if(desiredAngel>0){
                             values.add(3);
-                            if(Rflag>1) continue;
+                            if(Rflag>1)
+                            {
+                                if(RRflag>1)
+                                {
+                                    Rflag=0;
+                                    RRflag=0;
+                                }
+                                else RRflag++;
+                                continue;
+                            }
+                            //if(Rflag>1) continue;
                             double sleeptime=desiredAngel*11;
                             int truesleeptime=(int)(sleeptime);
                             Log.e("data", "1: "+Double.toString(getDis[0])+" 2: "+Double.toString(getDis[1])+" 3: "+Double.toString(getDis[2]));
@@ -519,6 +546,7 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
                             sendCarPacket(SmartMessage.RIGHT);
                             Rflag++;
                             Lflag=0;
+                            LLflag=0;
                             Thread.sleep( truesleeptime );
                             //sendCarPacket(SmartMessage.CENTER);
 
@@ -528,6 +556,8 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
                             sendCarPacket(SmartMessage.TOP_CENTER);
                             Lflag=0;
                             Rflag=0;
+                            LLflag=0;
+                            RRflag=0;
 //                            Thread.sleep( 3000 );
                         }
                     }
@@ -540,6 +570,8 @@ public class MainActivity extends AppCompatActivity implements HBEBTListener {
                         sendCarPacket(SmartMessage.TOP_CENTER);
                         Lflag=0;
                         Rflag=0;
+                        LLflag=0;
+                        RRflag=0;
                     }
 
 
